@@ -1880,7 +1880,7 @@ if ($ACTION == 'manDiaLnextCaLL')
 							$rowCamp=mysqli_fetch_row($rsltCamp);
 							$dial_met = $rowCamp[0];
 							$checkbox = $rowCamp[1];
-							///$manList = 	$rowCamp[2];
+							///$manList = 	$row[2];
 							if(($dial_met == 'MANUAL' || $dial_met == 'INBOUND_MAN') && ($checkbox == 'SELECTED' || $checkbox == 'SELECTED_RESET')){
 								// пока отбрасываем из общего количества мануальный список, чтобы по нему не шёл поиск
 								$stmtA="SELECT list_id,active from vicidial_lists where campaign_id='$campaign' and active = 'Y' and list_id != '$list_id';";
@@ -11443,7 +11443,7 @@ if ($ACTION == 'SEARCHRESULTSview')
 				}
 			$camp_lists = preg_replace("/.$/i","",$camp_lists);
 			if (strlen($camp_lists)<2) {$camp_lists="''";}
-			$searchmethodSQL=" and list_id IN($camp_lists)";
+			$searchmethodSQL=" and vl.list_id IN($camp_lists)";
 			}
 		if (preg_match('/CAMPAIGNLISTS/',$agent_lead_search_method))
 			{
@@ -11461,7 +11461,7 @@ if ($ACTION == 'SEARCHRESULTSview')
 				}
 			$camp_lists = preg_replace("/.$/i","",$camp_lists);
 			if (strlen($camp_lists)<2) {$camp_lists="''";}
-			$searchmethodSQL=" and list_id IN($camp_lists)";
+			$searchmethodSQL=" and vl.list_id IN($camp_lists)";
 			}
 
 
@@ -11507,16 +11507,21 @@ if ($ACTION == 'SEARCHRESULTSview')
 			echo "<TD BGCOLOR=\"#CCCCCC\"><font style=\"font-size:11px;font-family:sans-serif;\"><B> &nbsp; PHONE &nbsp; </font></TD>";
 			echo "<TD BGCOLOR=\"#CCCCCC\"><font style=\"font-size:11px;font-family:sans-serif;\"><B> &nbsp; STATUS &nbsp; </font></TD>";
 			echo "<TD BGCOLOR=\"#CCCCCC\"><font style=\"font-size:11px;font-family:sans-serif;\"><B> &nbsp; LAST CALL &nbsp; </font></TD>";
-			echo "<TD BGCOLOR=\"#CCCCCC\"><font style=\"font-size:11px;font-family:sans-serif;\"><B> &nbsp; CITY &nbsp; </font></TD>";
-			echo "<TD BGCOLOR=\"#CCCCCC\"><font style=\"font-size:11px;font-family:sans-serif;\"><B> &nbsp; STATE &nbsp; </font></TD>";
-			echo "<TD BGCOLOR=\"#CCCCCC\"><font style=\"font-size:11px;font-family:sans-serif;\"><B> &nbsp; ZIP &nbsp; </font></TD>";
+			echo "<TD BGCOLOR=\"#CCCCCC\"><font style=\"font-size:11px;font-family:sans-serif;\"><B> &nbsp; LIST_ID &nbsp; </font></TD>";
+			echo "<TD BGCOLOR=\"#CCCCCC\"><font style=\"font-size:11px;font-family:sans-serif;\"><B> &nbsp; LIST NAME / ACTIVE &nbsp; </font></TD>";
+			echo "<TD BGCOLOR=\"#CCCCCC\"><font style=\"font-size:11px;font-family:sans-serif;\"><B> &nbsp; MODIFY DATE &nbsp; </font></TD>";
 			echo "<TD BGCOLOR=\"#CCCCCC\"><font style=\"font-size:11px;font-family:sans-serif;\"><B> &nbsp; INFO &nbsp; </font></TD>";
 			echo "<TD BGCOLOR=\"#CCCCCC\"><font style=\"font-size:11px;font-family:sans-serif;\"><B> &nbsp; DIAL &nbsp; </font></TD>";
 			echo "</TR>";
 
 			if ($search_result_count)
 				{
-				$stmt="SELECT first_name,last_name,phone_code,phone_number,status,last_local_call_time,lead_id,city,state,postal_code from vicidial_list where $searchSQL $searchownerSQL $searchmethodSQL order by last_local_call_time desc limit 1000;";
+				$stmt="SELECT first_name,last_name,phone_code,phone_number,vl.status,last_local_call_time,vl.lead_id,
+				vls.list_id, CONCAT(vls.list_name, ' / ', vls.active) AS cnct, vl.modify_date
+				from vicidial_list vl
+				join vicidial_lists vls
+				on vls.list_id = vl.list_id
+				where $searchSQL $searchownerSQL $searchmethodSQL order by last_local_call_time desc limit 1000;";
 				$rslt=mysql_to_mysqli($stmt, $link);
 					if ($mel > 0) {mysql_error_logging($NOW_TIME,$link,$mel,$stmt,'00380',$user,$server_ip,$session_name,$one_mysql_log);}
 				$out_logs_to_print = mysqli_num_rows($rslt);
