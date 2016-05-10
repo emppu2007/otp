@@ -1872,11 +1872,48 @@ if ($ACTION == 'manDiaLnextCaLL')
 						}
 					else
 						{
-						$stmt="SELECT lead_id FROM vicidial_list where phone_number='$phone_number' order by modify_date desc LIMIT 1;";
-						$rslt=mysql_to_mysqli($stmt, $link);
-							if ($mel > 0) {mysql_error_logging($NOW_TIME,$link,$mel,$stmt,'00362',$user,$server_ip,$session_name,$one_mysql_log);}
-						if ($DB) {echo "$stmt\n";}
-						$man_leadID_ct = mysqli_num_rows($rslt);
+							/// AREON GASENKOV 2016-04-11 BEGIN ///
+							/// Проверка метода дозвона на кампании
+							$stmtCamp="SELECT dial_method, manual_dial_search_checkbox, manual_dial_list_id from vicidial_campaigns where campaign_id='$campaign' and active = 'Y'";
+							$rsltCamp=mysql_to_mysqli($stmtCamp, $link);
+							if ($DB) {echo "$stmtCamp\n";}
+							$rowCamp=mysqli_fetch_row($rsltCamp);
+							$dial_met = $rowCamp[0];
+							$checkbox = $rowCamp[1];
+							///$manList = 	$rowCamp[2];
+							if(($dial_met == 'MANUAL' || $dial_met == 'INBOUND_MAN') && ($checkbox == 'SELECTED' || $checkbox == 'SELECTED_RESET')){
+								// пока отбрасываем из общего количества мануальный список, чтобы по нему не шёл поиск
+								$stmtA="SELECT list_id,active from vicidial_lists where campaign_id='$campaign' and active = 'Y' and list_id != '$list_id';";
+								$rslt=mysql_to_mysqli($stmtA, $link);
+									if ($mel > 0) {mysql_error_logging($NOW_TIME,$link,$mel,$stmtA,'00019',$user,$server_ip,$session_name,$one_mysql_log);}
+								if ($DB) {echo "$stmtA\n";}
+								$lists_to_parse = mysqli_num_rows($rslt);
+								$camp_lists='';
+								$o=0;
+								while ($lists_to_parse > $o) 
+									{
+									$rowx=mysqli_fetch_row($rslt);
+									if (preg_match("/Y/", $rowx[1])) {$active_lists++;   $camp_lists .= "'$rowx[0]',";}
+									$o++;
+									}
+								$camp_lists = preg_replace("/.$/i","",$camp_lists);
+								if (strlen($camp_lists)<2) {$camp_lists="''";}	
+								// сперва ищем только в активных по кампании, исключая ручной	
+								$stmt="SELECT lead_id FROM vicidial_list where phone_number='$phone_number' AND list_id IN ($camp_lists) order by modify_date desc LIMIT 1;";
+								$rslt=mysql_to_mysqli($stmt, $link);
+									if ($mel > 0) {mysql_error_logging($NOW_TIME,$link,$mel,$stmt,'00362',$user,$server_ip,$session_name,$one_mysql_log);}
+								if ($DB) {echo "$stmt\n";}
+								$man_leadID_ct = mysqli_num_rows($rslt);
+								/// если не нашли в основных списках - ищем в ручном
+								if ($man_leadID_ct <= 0){
+									$stmt="SELECT lead_id FROM vicidial_list where phone_number='$phone_number' AND list_id IN ($list_id) order by modify_date desc LIMIT 1;";
+									$rslt=mysql_to_mysqli($stmt, $link);
+										if ($mel > 0) {mysql_error_logging($NOW_TIME,$link,$mel,$stmt,'00362',$user,$server_ip,$session_name,$one_mysql_log);}
+									if ($DB) {echo "$stmt\n";}
+									$man_leadID_ct = mysqli_num_rows($rslt);
+								}
+							}
+							/// AREON END ///
 						}
 					if ($man_leadID_ct > 0)
 						{
